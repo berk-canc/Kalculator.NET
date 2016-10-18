@@ -84,6 +84,12 @@ namespace Kalculator
             m_histForm              = new HistoryForm();
             textBox.SelectionStart  = textBox.Text.Length;
             textBox.ScrollToCaret();
+
+            //uncomment to enable unit tests
+            //if (System.Diagnostics.Debugger.IsAttached)
+            //{
+            //    ExecUnitTests();
+            //}
         }
 
 
@@ -414,10 +420,16 @@ namespace Kalculator
 
         void EqualClicked()
         {
+            if (textBox.Text == "Infinity")
+            {
+                return;
+            }
+
             if (   m_lastClickedButtonType == ButtonType.BUTTON_TYPE_NUMBER
                 || m_lastClickedButton     == Button.BUTTON_EQUAL
                 || m_lastClickedButton     == Button.BUTTON_PERCENTAGE
                 || m_lastClickedButton     == Button.BUTTON_DOT
+                || m_lastClickedButton     == Button.BUTTON_PLUS_MINUS
                 || m_lastClickedButton     == Button.BUTTON_COPY_MENU_ITEM
                 || m_lastClickedButton     == Button.BUTTON_PASTE_MENU_ITEM)
             {
@@ -430,27 +442,31 @@ namespace Kalculator
                     m_numberTwo = Convert.ToDouble(textBox.Text);
                 }
 
-                //fast calculation: 4+2=8=10=12=14...
-                if (m_lastClickedButton == Button.BUTTON_EQUAL)
-                {
-                    m_numberOne = Convert.ToDouble(textBox.Text);
-                }
 
-                if (m_lastClickedButton == Button.BUTTON_PERCENTAGE)
+                switch(m_lastClickedButton)
                 {
-                    m_numberTwo = Convert.ToDouble(textBox.Text);
-                }
+                    //fast calculation: 4+2=8=10=12=14...
+                    case Button.BUTTON_EQUAL:
+                        m_numberOne = Convert.ToDouble(textBox.Text);
+                        break;
 
-                if (   m_lastClickedButton == Button.BUTTON_COPY_MENU_ITEM
-                    || m_lastClickedButton == Button.BUTTON_PASTE_MENU_ITEM)
-                {
-                    m_numberTwo = Convert.ToDouble(textBox.Text);
-                }
+                    case Button.BUTTON_PERCENTAGE:
+                        m_numberTwo = Convert.ToDouble(textBox.Text);
+                        break;
 
-                if (m_lastClickedButton == Button.BUTTON_DOT)
-                {
-                    //erase the '.' first
-                    m_numberTwo = Convert.ToDouble(textBox.Text.Remove(textBox.Text.Length-1, 1));
+                    case Button.BUTTON_COPY_MENU_ITEM:
+                    case Button.BUTTON_PASTE_MENU_ITEM:
+                        m_numberTwo = Convert.ToDouble(textBox.Text);
+                        break;
+
+                    case Button.BUTTON_DOT:
+                        //erase the '.' first
+                        m_numberTwo = Convert.ToDouble(textBox.Text.Remove(textBox.Text.Length - 1, 1));
+                        break;
+
+                    case Button.BUTTON_PLUS_MINUS:
+                        m_numberTwo = Convert.ToDouble(textBox.Text);
+                        break;
                 }
 
                 switch (operatorButton)
@@ -475,8 +491,6 @@ namespace Kalculator
                         {
                             MessageBox.Show("Cannot divide by 0.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 
-                            //this block is same as Clear_Button_Clicked except for 
-                            //logging event and logging last clicked button
                             m_result     = "0";
                             textBox.Text = "0";
                             m_numberOne  = 0;
@@ -514,6 +528,11 @@ namespace Kalculator
 
         void DotClicked()
         {
+            if (textBox.Text == "Infinity" || textBox.Text.Contains("E"))
+            {
+                return;
+            }
+
             //if it has no '.'
             if (textBox.Text.IndexOf('.') == -1)
             {
@@ -753,15 +772,16 @@ namespace Kalculator
 
         void ExecUnitTests()
         {
-            //1.1+2.1
+            //1.1.+2.10
             NumberButtonClicked(1);
             DotClicked();
             NumberButtonClicked(1);
+            DotClicked();
             OperatorButtonClicked(Button.BUTTON_PLUS);
             NumberButtonClicked(2);
             DotClicked();
             NumberButtonClicked(1);
-
+            NumberButtonClicked(0);
             EqualClicked();
 
             if(textBox.Text != "3.2")
@@ -772,7 +792,6 @@ namespace Kalculator
             NumberButtonClicked(0);
             OperatorButtonClicked(Button.BUTTON_MULTIPLY);
             NumberButtonClicked(2);
-
             EqualClicked();
 
             if (textBox.Text != "80")
@@ -787,7 +806,6 @@ namespace Kalculator
             NumberButtonClicked(0);
             DotClicked();
             NumberButtonClicked(0);
-
             EqualClicked();
 
             if (textBox.Text != "10")
@@ -821,7 +839,7 @@ namespace Kalculator
 
             ClearClicked();
 
-            //625sqrt,sqrt,sqrt,+/-,*111
+            //625sqrt,sqrt,sqrt,+/-,*111 , +/- =
             NumberButtonClicked(6);
             NumberButtonClicked(2);
             NumberButtonClicked(5);
@@ -832,9 +850,10 @@ namespace Kalculator
             NumberButtonClicked(1);
             NumberButtonClicked(1);
             NumberButtonClicked(1);
+            PlusMinusClicked();
             EqualClicked();
 
-            if (textBox.Text != "-555")
+            if (textBox.Text != "555")
                 Debugger.Break();
 
             ClearClicked();
@@ -872,7 +891,7 @@ namespace Kalculator
             OperatorButtonClicked(Button.BUTTON_MINUS);
             NumberButtonClicked(1);
             for (int i = 0; i < 100; i++)
-                EqualClicked();
+                EqualClicked(); //300
             OperatorButtonClicked(Button.BUTTON_DIVIDE);
             NumberButtonClicked(2); //150
             EqualClicked();
@@ -943,6 +962,239 @@ namespace Kalculator
 
             if (textBox.Text != "0.5")
                 Debugger.Break();
+
+            Copy();
+            ClearClicked();
+
+            //paste (0.5) , ***0.05=== , *100000000 , copy , + , paste , =.
+            Paste();
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(0);
+            DotClicked();
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(5);
+            EqualClicked();
+            EqualClicked();
+            EqualClicked(); //0.0000000625
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(1);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            EqualClicked(); //6.25
+            Copy();
+            OperatorButtonClicked(Button.BUTTON_PLUS);
+            Paste();
+            EqualClicked(); //12.5
+            DotClicked();
+
+            if (textBox.Text != "12.5")
+                Debugger.Break();
+
+            //00012345,BS,BS,4567890 - 123456789,BS,90 , =*123= , +/-
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(1);
+            NumberButtonClicked(2);
+            NumberButtonClicked(3);
+            NumberButtonClicked(4);
+            NumberButtonClicked(5);
+            BackspaceClicked();
+            BackspaceClicked();
+            NumberButtonClicked(4);
+            NumberButtonClicked(5);
+            NumberButtonClicked(6);
+            NumberButtonClicked(7);
+            NumberButtonClicked(8);
+            NumberButtonClicked(9);
+            NumberButtonClicked(0);
+            OperatorButtonClicked(Button.BUTTON_MINUS);
+            NumberButtonClicked(1);
+            NumberButtonClicked(2);
+            NumberButtonClicked(3);
+            NumberButtonClicked(4);
+            NumberButtonClicked(5);
+            NumberButtonClicked(6);
+            NumberButtonClicked(7);
+            NumberButtonClicked(8);
+            NumberButtonClicked(9);
+            BackspaceClicked();
+            NumberButtonClicked(9);
+            NumberButtonClicked(0);
+            EqualClicked(); //0
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(1);
+            NumberButtonClicked(2);
+            NumberButtonClicked(3);
+            EqualClicked(); //0
+            PlusMinusClicked();
+
+            if (textBox.Text != "0")
+                Debugger.Break();
+
+            //999*999===== BS , % , sqrt , . , +/-
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            EqualClicked();
+            EqualClicked();
+            EqualClicked();
+            EqualClicked();
+            EqualClicked();
+            BackspaceClicked();
+            PercentageClicked();
+            SqrtClicked();
+            DotClicked();
+            PlusMinusClicked();
+
+            if (textBox.Text != "9.94014980014994E+17")
+                Debugger.Break();
+
+            ClearClicked();
+
+            //99.-98.=+0.0000000001 , copy , x0=, paste, +0+1=
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            DotClicked();
+            OperatorButtonClicked(Button.BUTTON_MINUS);
+            NumberButtonClicked(9);
+            NumberButtonClicked(8);
+            DotClicked();
+            EqualClicked(); //1
+            OperatorButtonClicked(Button.BUTTON_PLUS);
+            NumberButtonClicked(0);
+            DotClicked();
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(0);
+            NumberButtonClicked(1);
+            EqualClicked();
+            Copy();
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(0);
+            EqualClicked();
+            Paste();
+            OperatorButtonClicked(Button.BUTTON_PLUS);
+            NumberButtonClicked(0);
+            EqualClicked();
+            OperatorButtonClicked(Button.BUTTON_PLUS);
+            NumberButtonClicked(1);
+            EqualClicked();
+
+            if (textBox.Text != "2.0000000001")
+                Debugger.Break();
+
+            ClearClicked();
+
+            //9999999999*9999999999 , 30 times = , BS , % , sqrt , . , +/- , 1*1===
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            NumberButtonClicked(9);
+            for (int i = 0; i < 30; i++)
+                EqualClicked();
+            BackspaceClicked();
+            PercentageClicked();
+            SqrtClicked();
+            DotClicked();
+            PlusMinusClicked();
+
+            if (textBox.Text != "Infinity")
+                Debugger.Break();
+
+            NumberButtonClicked(1);
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(1);
+            EqualClicked();
+            EqualClicked();
+            EqualClicked();
+
+            if (textBox.Text != "1")
+                Debugger.Break();
+
+            ClearClicked();
+
+            //test chopping
+            SetText("1.0000000000000000012");
+
+            if (textBox.Text != "1.000000000000000001")
+                Debugger.Break();
+
+            SetText("55500000000000009999123");
+
+            if (textBox.Text != "55500000000000009999")
+                Debugger.Break();
+
+            ClearClicked();
+
+            //do not chop if it has E
+            SetText("9.58940490108885E+4500000");
+
+            if (textBox.Text != "9.58940490108885E+4500000")
+                Debugger.Break();
+
+            ClearClicked();
+
+            //-2*-2 , sqrt, -2*0.01= , +/- , =
+            NumberButtonClicked(2);
+            PlusMinusClicked();
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(2);
+            PlusMinusClicked();
+            EqualClicked();
+            SqrtClicked(); //2
+            OperatorButtonClicked(Button.BUTTON_MINUS);
+            NumberButtonClicked(2);
+            EqualClicked();
+            OperatorButtonClicked(Button.BUTTON_MULTIPLY);
+            NumberButtonClicked(0);
+            DotClicked();
+            NumberButtonClicked(0);
+            NumberButtonClicked(1);
+            EqualClicked();
+            PlusMinusClicked();
+            EqualClicked();
+
+            if (textBox.Text != "0")
+                Debugger.Break();
+
         }
+
     }//class
 }//namespace
