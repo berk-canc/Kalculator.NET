@@ -700,7 +700,6 @@ namespace Kalculator
                 case '/':           OperatorButtonClicked(Button.BUTTON_DIVIDE);      break;
                 case '*':           OperatorButtonClicked(Button.BUTTON_MULTIPLY);    break;
                 case '.':           DotClicked();                                     break;
-                case (char)127:     ClearClicked();                                   break; //todo: del char
 
                 case '=':
                 case '\r': //enter
@@ -711,6 +710,17 @@ namespace Kalculator
                     BackspaceClicked();
                     break;
             }//switch
+
+            e.Handled = true;
+        }
+
+
+        private void textBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyValue == 46) //del char
+            {
+                ClearClicked();
+            }
 
             e.Handled = true;
         }
@@ -1195,6 +1205,5 @@ namespace Kalculator
                 Debugger.Break();
 
         }
-
     }//class
 }//namespace
